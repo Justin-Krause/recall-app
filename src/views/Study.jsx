@@ -36,11 +36,13 @@ export default function Study({ initialQueue, onBack, onReview, onFinish }) {
 
         setSess(s => ({ rev: s.rev + 1, ok: q >= 3 ? s.ok + 1 : s.ok }));
 
+        let nextLen = queue.length;
         if (q < 3) {
-            setQueue(qq => [...qq, card]);
+            setQueue(qq => [...qq, updated]);
+            nextLen++;
         }
 
-        if (ci + 1 < queue.length) {
+        if (ci + 1 < nextLen) {
             setFlipped(false);
             setCi(i => i + 1);
         } else {

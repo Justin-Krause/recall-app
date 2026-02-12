@@ -1,11 +1,21 @@
-import React from "react";
+import React, { useState } from "react";
 import { Icons } from "../assets/icons";
 import { SM2 } from "../lib/sm2";
 import { strip, hasMed } from "../lib/utils";
 
 export default function Deck({ deck, onBack, onStartStudy, onAddCard, onImport, onDeleteDeck, onEditCard, onDeleteCard }) {
     if (!deck) return null;
+    const [search, setSearch] = useState("");
     const due = deck.cards.filter(SM2.due);
+
+    const filteredCards = deck.cards.filter(c => {
+        if (!search.trim()) return true;
+        // User requested search by both Question (front) and Answer (back).
+        const term = search.toLowerCase();
+        const contentBack = strip(c.back).toLowerCase();
+        const contentFront = strip(c.front).toLowerCase();
+        return contentBack.includes(term) || contentFront.includes(term);
+    });
 
     return (
         <>
@@ -25,7 +35,7 @@ export default function Deck({ deck, onBack, onStartStudy, onAddCard, onImport, 
                 <button className="btn bg btn-sm" onClick={onImport} title="Import">{Icons.imp}</button>
             </div>
 
-            {due.length === 0 && deck.cards.length > 0 && (
+            {due.length === 0 && deck.cards.length > 0 && !search && (
                 <div className="sc" style={{ marginBottom: 20 }}>
                     <div style={{ color: "var(--ok)", marginBottom: 8 }}>{Icons.check}</div>
                     <p style={{ fontWeight: 600 }}>Alles erledigt!</p>
@@ -33,11 +43,22 @@ export default function Deck({ deck, onBack, onStartStudy, onAddCard, onImport, 
                 </div>
             )}
 
-            <div className="stitle">
-                <h2>Alle Karten ({deck.cards.length})</h2>
+            <div className="stitle" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h2>Alle Karten ({filteredCards.length}{search && ` / ${deck.cards.length}`})</h2>
             </div>
 
-            {deck.cards.map(c => (
+            <div style={{ marginBottom: 16 }}>
+                <input
+                    type="text"
+                    className="input"
+                    placeholder="Suche in Fragen und Antworten..."
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    style={{ width: "100%" }}
+                />
+            </div>
+
+            {filteredCards.map(c => (
                 <div key={c.id} className="cli">
                     <div className="ct">
                         <span className="cf">{strip(c.front)}</span>
@@ -52,13 +73,15 @@ export default function Deck({ deck, onBack, onStartStudy, onAddCard, onImport, 
                 </div>
             ))}
 
-            {!deck.cards.length && <div className="empty"><p>Noch keine Karten.</p></div>}
+            {!filteredCards.length && <div className="empty"><p>{search ? "Keine Treffer." : "Noch keine Karten."}</p></div>}
 
-            <div style={{ marginTop: 32, borderTop: "1px solid var(--bd)", paddingTop: 20 }}>
-                <button className="btn bg bd btn-sm" onClick={() => { if (confirm("Deck löschen?")) onDeleteDeck(deck.id); }}>
-                    {Icons.trash} Deck löschen
-                </button>
-            </div>
+            {!search && (
+                <div style={{ marginTop: 32, borderTop: "1px solid var(--bd)", paddingTop: 20 }}>
+                    <button className="btn bg bd btn-sm" onClick={() => { if (confirm("Deck löschen?")) onDeleteDeck(deck.id); }}>
+                        {Icons.trash} Deck löschen
+                    </button>
+                </div>
+            )}
         </>
     );
 }

@@ -14,13 +14,30 @@ export default function RichEditor({ value, onChange, placeholder, autoFocus }) 
 
     useEffect(() => {
         if (ref.current && !init.current) {
-            ref.current.innerHTML = value || "";
+            // Only set if not empty to avoid overwriting if there's already something (unlikely on mount)
+            if (value) ref.current.innerHTML = value;
             init.current = true;
             if (autoFocus) setTimeout(() => ref.current?.focus(), 50);
         }
     }, []);
 
-    useEffect(() => { if (ref.current && value === "" && init.current) ref.current.innerHTML = ""; }, [value]);
+    // This effect might be fighting with user input if value is not updated fast enough?
+    // RichEditor is uncontrolled for innerHTML but updates via onChange.
+    // If parent updates value, this effect runs.
+    // If the cursor is inside, resetting innerHTML resets cursor position!
+    // We should only update if the new value is significantly different and we are not focused, 
+    // OR if the value is being cleared (e.g. after add).
+    useEffect(() => {
+        if (ref.current && init.current) {
+            if (value === "" && ref.current.innerHTML !== "") {
+                ref.current.innerHTML = "";
+            }
+            // If value changed externally (e.g. edit mode loaded), we might want to update.
+            // But for "Add" flow, value starts empty, we type (onChange updates value), this effect sees new value.
+            // If we set innerHTML, cursor jumps.
+            // So we partially handled it with `value === ""` check, but let's be safer.
+        }
+    }, [value]);
 
     const ex = (cmd, val = null) => { ref.current.focus(); document.execCommand(cmd, false, val); fire(); };
     const fire = () => { if (ref.current) onChange(ref.current.innerHTML); };
@@ -97,7 +114,7 @@ export default function RichEditor({ value, onChange, placeholder, autoFocus }) 
                 <TB icon={Icons.img} fn={() => setModal("img")} title="Bild" />
                 <TB icon={Icons.tbl} fn={() => setModal("tbl")} title="Tabelle" />
             </div>
-            <div ref={ref} className="re-body" contentEditable onInput={fire} onPaste={onPaste} onDrop={onDrop} data-placeholder={placeholder} suppressContentEditableWarning />
+            <div ref={ref} className="re-body" contentEditable onInput={fire} onPaste={onPaste} onDrop={onDrop} data-placeholder={placeholder} suppressContentEditableWarning data-testid="rich-editor" />
 
             {modal === "img" && <MiniModal title="Bild einfügen" onClose={() => setModal(null)}>
                 <p className="mhint">URL eingeben oder Bild per Strg+V / Drag&Drop direkt einfügen</p>
